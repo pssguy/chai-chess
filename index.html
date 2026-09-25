@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChaiChess · Famous games, engine analysis and puzzles</title>
+<meta name="description" content="Replay ten of the most famous chess games with beginner and expert commentary, analyse your own games with Stockfish, play the engine, and solve puzzles.">
+<meta property="og:title" content="ChaiChess">
+<meta property="og:description" content="Famous games with commentary, free Stockfish analysis, puzzles and play-the-engine.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B2328'/%3E%3Ccircle cx='16' cy='10' r='4.5' fill='%23E0A845'/%3E%3Cpath d='M11 26h10l-2-8h-6z' fill='%23E0A845'/%3E%3Crect x='9' y='25' width='14' height='3' rx='1' fill='%23E0A845'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-font-smoothing:antialiased}img{max-width:100%}</style>
+</head>
+<body>
+<style>
+:root{
+  --bg:#EEF1F2; --panel:#FFFFFF; --panel2:#F6F8F8; --ink:#1B2328; --muted:#5D6B74; --line:#D3DADE;
+  --sq-light:#DCE3E6; --sq-dark:#7B93A2; --accent:#C98A1C; --accent-soft:rgba(214,154,45,.45);
+  --preview:#4F8A62; --bar-white:#F7F7F4; --bar-black:#2A3136;
+  --bad:#B4533A; --mist:#C4702A; --dubious:#A7861A; --good:#3E7C57; --brill:#2F7F95;
+  --display:"Big Shoulders Display","Arial Narrow",sans-serif;
+  --body:"Newsreader",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12181B; --panel:#1A2226; --panel2:#151C20; --ink:#E4E9EB; --muted:#93A2AA; --line:#2C373D;
+    --sq-light:#B9C5CB; --sq-dark:#5B7382; --bar-white:#E9ECEA; --bar-black:#0B0F11; --accent:#E0A845;
+    --bad:#E0826A; --mist:#E39A5A; --dubious:#E0B64C; --good:#7CC39A; --brill:#6FC1D6; --preview:#6DB183; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12181B; --panel:#1A2226; --panel2:#151C20; --ink:#E4E9EB; --muted:#93A2AA; --line:#2C373D;
+  --sq-light:#B9C5CB; --sq-dark:#5B7382; --bar-white:#E9ECEA; --bar-black:#0B0F11; --accent:#E0A845;
+  --bad:#E0826A; --mist:#E39A5A; --dubious:#E0B64C; --good:#7CC39A; --brill:#6FC1D6; --preview:#6DB183; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;padding-block:12px;border-bottom:2px solid var(--ink)}
+.brand{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;background:none;border:0;padding:0;color:var(--ink)}
+.brand span{color:var(--accent)}
+nav.top .links{display:flex;gap:4px;flex-wrap:wrap}
+nav.top .links button{border:0;background:none;font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:3px;color:var(--muted)}
+nav.top .links button.on{color:var(--ink);background:var(--panel)}
+h1,h2,h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0;text-wrap:balance;line-height:1}
+h1{font-weight:800;font-size:clamp(38px,7vw,72px)}
+h2{font-weight:800;font-size:clamp(28px,4.5vw,40px)}
+h3{font-weight:600;font-size:22px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lede{max-width:60ch;color:var(--muted);margin:10px 0 0}
+button{font-family:var(--mono);font-size:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+select,input[type=text],textarea{font-family:var(--mono);font-size:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+textarea{width:100%;min-height:150px;resize:vertical}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 12px;font-size:13px}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+
+/* home */
+.hero{padding-block:28px 6px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:end}
+@media (max-width:760px){.hero{grid-template-columns:1fr}}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.tool{text-align:left;display:flex;flex-direction:column;gap:6px;padding:14px 16px;font-family:var(--body);font-size:15px;line-height:1.4}
+.tool b{font-family:var(--display);font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.tool span{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.gcard{text-align:left;padding:0;overflow:hidden;display:flex;flex-direction:column;font-family:var(--body);background:var(--panel)}
+.gcard .mini{width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr))}
+.gcard .mini .sq{min-width:0;min-height:0;overflow:hidden}
+.gcard .mini .sq img{width:92%;height:92%}
+.gcard .info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px}
+.gcard .yr{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.gcard .yr i{font-style:normal;color:var(--accent)}
+.gcard .t{font-family:var(--display);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.02em;line-height:1.05}
+.gcard .p{font-size:14px;color:var(--muted);line-height:1.3}
+.gcard:hover .t{color:var(--accent)}
+
+/* board */
+.boardcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+.player{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:.03em;text-transform:uppercase}
+.player small{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;text-align:right}
+.boardrow{display:flex;gap:8px;align-items:stretch}
+.evalbar{width:20px;flex:none;border-radius:3px;overflow:hidden;position:relative;background:var(--bar-black);border:1px solid var(--line)}
+.evalbar .w{position:absolute;left:0;right:0;bottom:0;background:var(--bar-white);transition:height .35s ease}
+.evalbar .mid{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--accent)}
+.evalbar.flip .w{top:0;bottom:auto}
+.board{flex:1;min-width:0;aspect-ratio:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border:1px solid var(--line);border-radius:3px;overflow:hidden;position:relative;touch-action:none;user-select:none}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden}
+.sq.l{background:var(--sq-light)} .sq.d{background:var(--sq-dark)}
+.sq.hl::before{content:"";position:absolute;inset:0;background:var(--accent-soft)}
+.board.previewing .sq.hl::before{background:rgba(79,138,98,.55)}
+.sq.sel::before{content:"";position:absolute;inset:0;background:rgba(79,138,98,.55)}
+.sq.tgt::after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(27,35,40,.28)}
+.sq.tgt.cap::after{width:88%;height:88%;background:none;border:4px solid rgba(27,35,40,.28)}
+.sq.chk{background:radial-gradient(circle,rgba(214,70,50,.8) 0%,rgba(214,70,50,0) 70%),var(--sq-dark)}
+.sq img{width:92%;height:92%;position:relative;pointer-events:none;-webkit-user-drag:none}
+.board.interactive .sq{cursor:pointer}
+.sq img.lift{opacity:.25}
+.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-50%)}
+.coord{position:absolute;font-family:var(--mono);font-size:10px;font-weight:600;line-height:1;pointer-events:none}
+.coord.r{top:3px;left:3px} .coord.f{bottom:2px;right:3px}
+.sq.l .coord{color:var(--sq-dark)} .sq.d .coord{color:var(--sq-light)}
+.promo{position:absolute;inset:0;background:rgba(10,14,16,.55);display:flex;align-items:center;justify-content:center;gap:8px;z-index:5}
+.promo button{width:22%;aspect-ratio:1;padding:4px;background:var(--panel)}
+.promo img{width:100%;height:100%}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+.controls .spacer{flex:1}
+.controls button{min-width:44px}
+.graph{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 10px 6px}
+.graph .lab{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between}
+.graph svg{width:100%;height:70px;display:block;cursor:pointer}
+
+.main{display:grid;grid-template-columns:minmax(0,540px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:880px){.main{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.ghead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px 20px;padding-top:22px}
+.ghead .meta{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.opening{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.02em;margin:0 0 10px;text-wrap:balance}
+.movehead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.movehead .san{font-family:var(--mono);font-weight:600;font-size:22px}
+.glyph{font-family:var(--mono);font-weight:600;font-size:12px;padding:1px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.c-blunder{color:var(--bad)} .c-mistake{color:var(--mist)} .c-inacc{color:var(--dubious)} .c-good{color:var(--good)} .c-brill{color:var(--brill)}
+.verdict{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:14px;flex-wrap:wrap}
+.verdict .num{font-weight:600;font-size:16px;min-width:5ch}
+.note{margin:10px 0 0;max-width:64ch}
+.note.auto{color:var(--muted)}
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.cardhead .eyebrow{margin:0}
+.lines{display:flex;flex-direction:column;gap:8px}
+.line{display:flex;gap:4px 8px;align-items:baseline;font-family:var(--mono);font-size:13.5px;flex-wrap:wrap}
+.line .ev{font-weight:600;min-width:6ch}
+.line .stp{background:none;border:0;padding:1px 3px;font-size:13.5px;border-radius:3px;color:var(--ink)}
+.line .stp:hover{background:var(--panel2)}
+.line .stp.on{background:var(--preview);color:#fff}
+.line .num{color:var(--muted)}
+.previewbar{display:flex;gap:10px;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:13px;color:var(--preview);border:1px dashed var(--preview);border-radius:4px;padding:6px 10px;margin-bottom:8px}
+.moves{display:grid;grid-template-columns:3.2ch 1fr 1fr;gap:1px 6px;font-family:var(--mono);font-size:14px;max-height:260px;overflow-y:auto;padding-right:4px}
+.moves .n{color:var(--muted);text-align:right;padding:3px 0}
+.moves button{border:0;background:none;text-align:left;padding:3px 6px;font-size:14px;border-radius:3px}
+.moves button:hover{background:var(--panel2)}
+.moves button.cur{background:var(--ink);color:var(--bg)}
+.moves sup{font-size:11px;margin-left:2px}
+.moves button.cur sup{color:inherit}
+.review{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.review .pl{background:var(--panel2);border-radius:4px;padding:10px}
+.review .acc{font-family:var(--display);font-weight:800;font-size:34px;line-height:1}
+.review .acc small{font-size:16px;font-weight:600}
+.review ul{list-style:none;margin:6px 0 0;padding:0;font-family:var(--mono);font-size:13px}
+.review li{display:flex;justify-content:space-between}
+.turn{margin-top:10px;font-size:15px}
+.turn button{font-size:13px;padding:2px 8px}
+.progress{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.progress div{height:100%;background:var(--accent);width:0;transition:width .2s}
+.status{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.score{font-family:var(--display);font-weight:800;font-size:40px;line-height:1}
+.feedback{font-size:16px;padding:8px 10px;border-radius:4px;background:var(--panel2)}
+.feedback.ok{border-left:4px solid var(--good)} .feedback.meh{border-left:4px solid var(--dubious)} .feedback.no{border-left:4px solid var(--bad)}
+.foot{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:90ch}
+.plist{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto}
+.plist button{text-align:left;display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.plist button span:first-child{min-width:0}
+.plist button span:last-child{flex:none}
+.plist button.on{border-color:var(--ink);background:var(--panel2)}
+.plist .done{color:var(--good)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:4px;z-index:60}
+@media (prefers-reduced-motion: reduce){.evalbar .w,.progress div{transition:none}}
+</style>
+
+<div class="wrap">
+<nav class="top">
+  <button class="brand" id="brand">Chai<span>Chess</span></button>
+  <div class="links">
+    <button data-nav="home">Games</button>
+    <button data-nav="import">Your game</button>
+    <button data-nav="analysis">Analysis board</button>
+    <button data-nav="play">Play</button>
+    <button data-nav="puzzles">Puzzles</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<section id="v-home">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Ten games that changed chess · commentary for beginners and club players</p>
+      <h1>ChaiChess</h1>
+      <p class="lede">Replay the classics with notes at two levels and a Stockfish engine alongside. Paste in your own games for a review, test yourself on the masters' moves, or play the engine at a strength that suits you.</p>
+    </div>
+    <div class="tools">
+      <button class="tool" data-nav="import"><b>Your game</b><span>Paste a PGN from Lichess, Chess.com or anywhere. Full engine review, run in your browser.</span></button>
+      <button class="tool" data-nav="play"><b>Play the engine</b><span>Seven levels, from about 800 to full strength. Review the game afterwards.</span></button>
+      <button class="tool" data-nav="puzzles"><b>Puzzles</b><span>Find the winning move from the key moments of these games.</span></button>
+      <button class="tool" data-nav="analysis"><b>Analysis board</b><span>Set up any position, make moves, and see what the engine thinks.</span></button>
+    </div>
+  </div>
+  <div style="height:22px"></div>
+  <div class="cardhead"><p class="eyebrow">The games</p><span class="status">Each opens at move 1 · “Guess the move” is inside every game</span></div>
+  <div class="grid" id="grid"></div>
+  <p class="foot" style="margin-top:28px">Engine: Stockfish 18 (lite, single-threaded) compiled to WebAssembly, GPLv3, source at github.com/official-stockfish/Stockfish and github.com/nmrugg/stockfish.js. Move rules: chess.js (BSD). Pieces: Colin M.L. Burnett's set, as shipped with python-chess. Famous-game evaluations were computed in advance with Stockfish 16; your own games are analysed live in your browser.</p>
+</section>
+
+<!-- GAME VIEW -->
+<section id="v-game" hidden>
+  <div class="ghead">
+    <div><p class="eyebrow" id="gEyebrow"></p><h2 id="gTitle"></h2></div>
+    <div class="meta" id="gMeta"></div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="boardcol">
+      <div class="player" id="gTop"></div>
+      <div class="boardrow"><div class="evalbar" id="gBar"><div class="w"></div><div class="mid"></div></div><div class="board" id="gBoard"></div></div>
+      <div class="player" id="gBot"></div>
+      <div class="controls">
+        <button id="gStart" title="Start (Home)" aria-label="Start">⏮</button>
+        <button id="gPrev" title="Back (←)" aria-label="Back">◀</button>
+        <button id="gPlay" class="primary" title="Autoplay (space)">▶ Play</button>
+        <button id="gNext" title="Forward (→)" aria-label="Forward">▶</button>
+        <button id="gEnd" title="End (End)" aria-label="End">⏭</button>
+        <span class="spacer"></span>
+        <button id="gFlip">Flip</button>
+      </div>
+      <div class="graph"><div class="lab"><span>Engine evaluation, whole game</span><span>click to jump</span></div><svg id="gGraph" viewBox="0 0 400 70" preserveAspectRatio="none" role="img" aria-label="Evaluation graph"></svg></div>
+      <div class="row">
+        <button id="gExplore">Explore from here</button>
+        <button id="gCopy">Copy PGN</button>
+        <button id="gDownload" hidden>Download PGN</button>
+      </div>
+    </div>
+    <div class="side">
+      <div class="seg" role="tablist"><button id="mReplay" class="on">Replay</button><button id="mGuess">Guess the move</button></div>
+
+      <div class="card" id="guessCard" hidden>
+        <div class="cardhead"><p class="eyebrow">Guess the move</p>
+          <div class="row"><span class="status">Guess for</span><select id="guessSide"><option value="w">White</option><option value="b">Black</option><option value="both">Both sides</option></select></div></div>
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div><div class="score" id="guessScore">0</div><div class="status" id="guessTally">points from 0 guesses</div></div>
+          <div class="row"><button id="guessSkip">Skip move</button></div>
+        </div>
+        <p class="feedback" id="guessFb">Play the move you think the master chose. Exact match 3 points; an engine-approved alternative 2 or 1.</p>
+      </div>
+
+      <div class="card" id="noteCard">
+        <div class="cardhead"><p class="eyebrow">Commentary</p><div class="seg"><button id="lvB">Beginner</button><button id="lvE" class="on">Expert</button></div></div>
+        <p class="opening" id="gOpening"></p>
+        <div class="movehead"><span class="san" id="gSan"></span><span id="gGlyph"></span></div>
+        <div class="verdict"><span class="num" id="gEv"></span><span id="gEvText"></span></div>
+        <p class="note" id="gNote"></p>
+        <div id="claudeBox" hidden style="margin-top:12px">
+          <div class="row"><button id="askClaude" class="primary">Write commentary with Claude</button><button id="stopClaude" hidden>Stop</button><span class="status" id="claudeStatus"></span></div>
+        </div>
+      </div>
+
+      <div class="card" id="linesCard">
+        <p class="eyebrow" id="gLinesHead">Engine suggestions</p>
+        <div class="previewbar" id="gPreviewBar" hidden><span>Previewing an engine line, not the game</span><button id="gBack">Back to game</button></div>
+        <div class="lines" id="gLines"></div>
+      </div>
+
+      <div class="card" id="reviewCard">
+        <p class="eyebrow">Game review</p>
+        <div class="review" id="gReview"></div>
+        <div class="turn" id="gTurn"></div>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">Game score</p>
+        <div class="moves" id="gMoves"></div>
+      </div>
+    </div>
+  </div>
+  <p class="foot" style="margin-top:14px" id="gFoot">Evaluations are Stockfish, in pawns from White's point of view (+1.00 ≈ an extra pawn for White). Move marks come from how much each move changed the engine's estimate of the winning chances: ?! inaccuracy, ? mistake, ?? blunder; ! and !! are the commentator's. Keys: ← → Home End, space to autoplay.</p>
+</section>
+
+<!-- IMPORT -->
+<section id="v-import" hidden>
+  <div class="ghead"><div><p class="eyebrow">Your game</p><h2>Analyse a game</h2></div></div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="side">
+      <div class="card">
+        <p class="eyebrow">Paste PGN</p>
+        <textarea id="pgnIn" spellcheck="false" placeholder='[White "You"]&#10;[Black "Opponent"]&#10;&#10;1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 ...'></textarea>
+        <div class="row" style="margin-top:10px"><button class="primary" id="pgnGo">Analyse</button><button id="pgnSample">Try an example</button><span class="status" id="pgnMsg"></span></div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Or a game link</p>
+        <div class="row"><input type="text" id="linkIn" placeholder="https://lichess.org/abcd1234" style="flex:1;min-width:200px"><button id="linkGo">Check link</button></div>
+        <p class="note" id="linkMsg" style="font-size:15px">This page can't open other websites itself, so links need one extra step: copy the game's PGN from the site and paste it above.</p>
+      </div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <p class="eyebrow">Where to find the PGN</p>
+        <p class="note" style="margin-top:0"><b>Lichess:</b> open the game, choose the <i>Share &amp; export</i> (or <i>FEN &amp; PGN</i>) tab under the board, and copy the PGN text.</p>
+        <p class="note"><b>Chess.com:</b> open the game, press the <i>Share</i> button, choose the <i>PGN</i> tab and copy it.</p>
+        <p class="note"><b>Chessgames.com:</b> use the <i>download</i> link on the game page, open the file and copy the text.</p>
+        <p class="note">Clock times, comments and side-lines in the PGN are fine; they are stripped out.</p>
+      </div>
+      <div class="card" id="anaProg" hidden>
+        <p class="eyebrow">Engine review</p>
+        <div class="progress"><div id="anaBar"></div></div>
+        <p class="status" id="anaMsg" style="margin-top:8px"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYSIS BOARD -->
+<section id="v-analysis" hidden>
+  <div class="ghead"><div><p class="eyebrow">Free analysis</p><h2>Analysis board</h2></div><div class="meta">Drag or click pieces to move · engine runs continuously</div></div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="boardcol">
+      <div class="boardrow"><div class="evalbar" id="aBar"><div class="w"></div><div class="mid"></div></div><div class="board interactive" id="aBoard"></div></div>
+      <div class="controls">
+        <button id="aUndo">Undo</button><button id="aReset">Start position</button><span class="spacer"></span><button id="aFlip">Flip</button>
+      </div>
+      <div class="row"><input type="text" id="aFen" placeholder="Paste a FEN to set up a position" style="flex:1;min-width:200px"><button id="aFenGo">Set</button></div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <div class="cardhead"><p class="eyebrow">Engine</p><span class="status" id="aDepth"></span></div>
+        <div class="verdict"><span class="num" id="aEv"></span><span id="aEvText"></span></div>
+        <div style="height:10px"></div>
+        <div class="lines" id="aLines"></div>
+        <p class="status" style="margin-top:10px">Click a move in a line to play the line up to that point.</p>
+      </div>
+      <div class="card">
+        <div class="cardhead"><p class="eyebrow">Moves</p><button id="aCopy">Copy PGN</button></div>
+        <div class="moves" id="aMoves"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAY -->
+<section id="v-play" hidden>
+  <div class="ghead"><div><p class="eyebrow">You against Stockfish</p><h2>Play the engine</h2></div></div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="boardcol">
+      <div class="player" id="pTop"></div>
+      <div class="boardrow"><div class="board interactive" id="pBoard"></div></div>
+      <div class="player" id="pBot"></div>
+      <div class="controls"><button id="pTake">Take back</button><button id="pResign">Resign</button><span class="spacer"></span><button id="pNew" class="primary">New game</button></div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <p class="eyebrow">Settings for the next game</p>
+        <div class="row"><span class="status">You play</span><div class="seg"><button id="cW" class="on">White</button><button id="cB">Black</button><button id="cR">Random</button></div></div>
+        <div style="height:10px"></div>
+        <div class="row"><span class="status">Engine strength</span><select id="pLevel"></select></div>
+        <p class="status" style="margin-top:8px">Ratings are approximate. The lowest two levels also play the odd random move on purpose, as beginners do.</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Game</p>
+        <p class="feedback" id="pStatus">Press New game to start.</p>
+        <div class="row" style="margin-top:10px"><button id="pReview" hidden class="primary">Review this game</button></div>
+        <div style="height:10px"></div>
+        <div class="moves" id="pMoves"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PUZZLES -->
+<section id="v-puzzles" hidden>
+  <div class="ghead"><div><p class="eyebrow">From the ten games</p><h2>Puzzles</h2></div><div class="meta" id="zTally"></div></div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="boardcol">
+      <div class="player" id="zTop"></div>
+      <div class="boardrow"><div class="board interactive" id="zBoard"></div></div>
+      <div class="player" id="zBot"></div>
+      <div class="controls"><button id="zHint">Hint</button><button id="zShow">Show solution</button><button id="zRetry">Retry</button><span class="spacer"></span><button id="zNext" class="primary">Next puzzle</button></div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <p class="eyebrow" id="zFrom"></p>
+        <h3 id="zTitle"></h3>
+        <p class="feedback" id="zFb" style="margin-top:10px"></p>
+        <p class="note" id="zAfter" hidden></p>
+        <div class="row" style="margin-top:10px"><button id="zOpen" hidden>Open this game at this moment</button></div>
+      </div>
+      <div class="card"><p class="eyebrow">All puzzles</p><div class="plist" id="zList"></div></div>
+    </div>
+  </div>
+</section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="chess.js"></script>
+<script>window.CHAI_STANDALONE = true;</script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

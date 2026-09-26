@@ -2,7 +2,10 @@
 /* Chai Chess intro: the board ripples in, pieces drop into place grouped by value
    (pawns first, kings last) and each landing plays a piano note: the lower the
    piece's value, the higher the note. Then the board lifts, the name appears and
-   the overlay fades to reveal the page. Shown once per browser session. */
+   the overlay fades to reveal the page. Shown once per browser session.
+   Sound: if the browser already allows it, the intro just plays with the piano.
+   Otherwise the board waits with "Press any key or tap to begin", because browsers
+   only allow sound after a real key press or tap. */
 (function () {
   const KEY = 'chai-intro-seen';
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -75,37 +78,68 @@
   const easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   const bounce = x => { const n = 7.5625, d = 2.75; if (x < 1 / d) return n * x * x; if (x < 2 / d) return n * (x -= 1.5 / d) * x + .75; if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + .9375; return n * (x -= 2.625 / d) * x + .984375; };
 
+  // Can this page make sound right now, without a click? (Chrome allows it on sites the
+  // visitor has used before; Safari and Firefox usually don't.)
+  function probeSound() {
+    const a = audioInit(); if (!a) return Promise.resolve(false);
+    if (a.state === 'running') return Promise.resolve(true);
+    return Promise.race([a.resume().then(() => a.state === 'running', () => false), new Promise(r => setTimeout(() => r(false), 250))]);
+  }
+  function unlockFromGesture() {             // must be called inside a real click / key press
+    const a = audioInit(); if (!a) return;
+    try { a.resume(); const b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0); } catch (e) { }
+  }
+
   function run() {
     const ov = document.createElement('div'); ov.id = 'chai-intro';
-    ov.innerHTML = '<canvas aria-hidden="true"></canvas><div class="ci-ctrl"><button type="button" class="ci-sound" aria-pressed="false">♪ Sound on</button><button type="button" class="ci-skip">Skip intro</button></div>';
+    ov.innerHTML = '<canvas aria-hidden="true"></canvas><p class="ci-gate" hidden>Press any key or tap to begin <span>♪</span></p><div class="ci-ctrl"><button type="button" class="ci-sound" hidden>♪ Mute</button><button type="button" class="ci-skip">Skip intro</button></div>';
     const st = document.createElement('style');
-    st.textContent = `#chai-intro{position:fixed;inset:0;z-index:1000;background:#151B1F;transition:opacity .75s ease}
+    st.textContent = `#chai-intro{position:fixed;inset:0;z-index:1000;background:#151B1F;transition:opacity .75s ease;cursor:default}
+#chai-intro.gated{cursor:pointer}
 #chai-intro canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#chai-intro .ci-gate{position:absolute;left:0;right:0;margin:0;text-align:center;font:500 15px "IBM Plex Mono",ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#E4E9EB;animation:ciPulse 1.8s ease-in-out infinite}
+#chai-intro .ci-gate span{color:#E0A845}
+@keyframes ciPulse{0%,100%{opacity:.45}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){#chai-intro .ci-gate{animation:none}}
 #chai-intro .ci-ctrl{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
 #chai-intro button{font:500 13px "IBM Plex Mono",ui-monospace,Menlo,monospace;letter-spacing:.04em;color:#E4E9EB;background:rgba(255,255,255,.06);border:1px solid rgba(228,233,235,.25);border-radius:4px;padding:8px 12px;cursor:pointer}
 #chai-intro button:hover{border-color:#E4E9EB}
-#chai-intro button:focus-visible{outline:2px solid #E0A845;outline-offset:2px}
-#chai-intro .ci-sound[aria-pressed="true"]{color:#151B1F;background:#E0A845;border-color:#E0A845}`;
+#chai-intro button:focus-visible{outline:2px solid #E0A845;outline-offset:2px}`;
     document.head.appendChild(st); document.body.appendChild(ov);
-    const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d');
+    const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d'), gateEl = ov.querySelector('.ci-gate'), sb = ov.querySelector('.ci-sound');
     let Wc = 0, Hc = 0, dpr = 1;
     const size = () => { dpr = window.devicePixelRatio || 1; Wc = ov.clientWidth; Hc = ov.clientHeight; cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); };
     size(); window.addEventListener('resize', size);
     const img = {}; for (const k in PIECES) { const i = new Image(); i.src = PIECES[k]; img[k] = i; }
 
-    let t0 = null, played = new Set(), done = false, raf = 0;
+    // phase: 'probe' (deciding), 'gate' (board shown, waiting for a press), 'play'
+    let phase = 'probe', t0 = null, offset = 0, played = new Set(), done = false, raf = 0;
+    const HOLD = .75;                        // gate freezes the clock here: board in, no pieces yet
+    const cleanup = [];
     const finish = () => {
       if (done) return; done = true; cancelAnimationFrame(raf); ov.style.opacity = '0';
       try { sessionStorage.setItem(KEY, '1'); } catch (e) { }
+      cleanup.forEach(f => f());
       setTimeout(() => { ov.remove(); st.remove(); window.removeEventListener('resize', size); }, 800);
     };
-    ov.querySelector('.ci-skip').onclick = finish;
-    const sb = ov.querySelector('.ci-sound');
-    sb.onclick = () => {
-      soundOn = !soundOn; sb.setAttribute('aria-pressed', soundOn); sb.textContent = soundOn ? '♪ Sound off' : '♪ Sound on';
-      if (soundOn) { const a = audioInit(); if (a && a.state === 'suspended') a.resume(); t0 = null; played.clear(); }  // restart so the music is heard from the first pawn
+    const showMute = () => { sb.hidden = false; sb.textContent = soundOn ? '♪ Mute' : '♪ Sound on'; };
+    ov.querySelector('.ci-skip').onclick = e => { e.stopPropagation(); finish(); };
+    sb.onclick = e => { e.stopPropagation(); if (!soundOn) unlockFromGesture(); soundOn = !soundOn; showMute(); };
+
+    const begin = () => {                    // start (or continue) the pieces with sound
+      if (phase === 'play' || done) return;
+      unlockFromGesture(); soundOn = true;
+      phase = 'play'; ov.classList.remove('gated'); gateEl.hidden = true; showMute();
+      t0 = null; offset = HOLD;              // carry on from the frozen board
     };
-    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { finish(); document.removeEventListener('keydown', esc); } });
+    const onKey = e => {
+      if (e.key === 'Escape') { finish(); return; }
+      if (phase !== 'gate' || e.key === 'Tab' || e.target.tagName === 'BUTTON' || e.repeat) return;
+      e.preventDefault(); begin();
+    };
+    const onPointer = e => { if (phase === 'gate' && !(e.target.closest && e.target.closest('button'))) begin(); };
+    document.addEventListener('keydown', onKey); ov.addEventListener('pointerdown', onPointer);
+    cleanup.push(() => document.removeEventListener('keydown', onKey));
 
     function wordmark(alpha, cx, y, size, tagAlpha) {
       if (alpha <= 0) return;
@@ -121,7 +155,8 @@
 
     function frame(now) {
       if (t0 == null) t0 = now;
-      const t = (now - t0) / 1000;
+      let t = offset + (now - t0) / 1000;
+      if (phase !== 'play') t = Math.min(t, HOLD);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const g = ctx.createRadialGradient(Wc / 2, Hc / 2, 50, Wc / 2, Hc / 2, Math.max(Wc, Hc) * .75); g.addColorStop(0, '#1F292E'); g.addColorStop(1, '#12171A');
       ctx.fillStyle = g; ctx.fillRect(0, 0, Wc, Hc);
@@ -129,10 +164,11 @@
       const lift = easeInOut(seg(t, ...LIFT));
       const S0 = Math.min(Wc * .86, Hc * .66), S = S0 * (1 - .34 * lift);
       const x = (Wc - S) / 2, y = (Hc - S0) / 2 - lift * Hc * .07, q = S / 8;
-      const shA = seg(t, .8, 1.3);
+      if (phase === 'gate') gateEl.style.top = Math.round(y + S0 + Math.min(40, Hc * .05)) + 'px';
+      const shA = seg(t, .5, 1.0);
       if (shA > 0) { ctx.save(); ctx.shadowColor = `rgba(0,0,0,${.55 * shA})`; ctx.shadowBlur = S * .08; ctx.shadowOffsetY = S * .03; ctx.fillStyle = '#7B93A2'; ctx.fillRect(x + 1, y + 1, S - 2, S - 2); ctx.restore(); }
       for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
-        const d = (f + (7 - r)) * .04, a = easeOut(seg(t, .05 + d, .35 + d)); if (a <= 0) continue;
+        const d = (f + (7 - r)) * .025, a = easeOut(seg(t, .05 + d, .3 + d)); if (a <= 0) continue;
         ctx.globalAlpha = a; ctx.fillStyle = (r + f) % 2 ? '#7B93A2' : '#DCE3E6';
         const sc = .6 + .4 * a, cx = x + f * q + q / 2, cy = y + r * q + q / 2;
         ctx.fillRect(cx - q * sc / 2, cy - q * sc / 2, q * sc + .6, q * sc + .6);
@@ -154,8 +190,13 @@
       if (t >= FADE[0]) { finish(); return; }
       raf = requestAnimationFrame(frame);
     }
-    const go = () => { raf = requestAnimationFrame(frame); };
-    (document.fonts && document.fonts.load ? Promise.race([document.fonts.load('800 100px "Big Shoulders Display"'), new Promise(r => setTimeout(r, 1200))]) : Promise.resolve()).then(go, go);
+    const fonts = document.fonts && document.fonts.load ? Promise.race([document.fonts.load('800 100px "Big Shoulders Display"'), new Promise(r => setTimeout(r, 1200))]).catch(() => { }) : Promise.resolve();
+    raf = requestAnimationFrame(frame);      // the board starts rippling in while we check
+    Promise.all([probeSound(), fonts]).then(([ok]) => {
+      if (done) return;
+      if (ok) { soundOn = true; phase = 'play'; showMute(); t0 = null; offset = HOLD; }
+      else { phase = 'gate'; ov.classList.add('gated'); gateEl.hidden = false; }
+    });
   }
 
   window.chaiIntro = () => { try { sessionStorage.removeItem(KEY); } catch (e) { } run(); };

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChaiChess · Famous games, engine analysis and puzzles</title>
+<title>Chai Chess · Famous games, engine analysis and puzzles</title>
 <meta name="description" content="Replay ten of the most famous chess games with beginner and expert commentary, analyse your own games with Stockfish, play the engine, and solve puzzles.">
-<meta property="og:title" content="ChaiChess">
+<meta property="og:title" content="Chai Chess">
 <meta property="og:description" content="Famous games with commentary, free Stockfish analysis, puzzles and play-the-engine.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B2328'/%3E%3Ccircle cx='16' cy='10' r='4.5' fill='%23E0A845'/%3E%3Cpath d='M11 26h10l-2-8h-6z' fill='%23E0A845'/%3E%3Crect x='9' y='25' width='14' height='3' rx='1' fill='%23E0A845'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,13 +172,15 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .plist button span:last-child{flex:none}
 .plist button.on{border-color:var(--ink);background:var(--panel2)}
 .plist .done{color:var(--good)}
+.sitefoot{max-width:1200px;margin:40px auto 0;padding-top:14px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sitefoot button{font-size:12px;padding:5px 10px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:4px;z-index:60}
 @media (prefers-reduced-motion: reduce){.evalbar .w,.progress div{transition:none}}
 </style>
 
 <div class="wrap">
 <nav class="top">
-  <button class="brand" id="brand">Chai<span>Chess</span></button>
+  <button class="brand" id="brand">Chai <span>Chess</span></button>
   <div class="links">
     <button data-nav="home">Games</button>
     <button data-nav="import">Your game</button>
@@ -193,7 +195,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
   <div class="hero">
     <div>
       <p class="eyebrow">Ten games that changed chess · commentary for beginners and club players</p>
-      <h1>ChaiChess</h1>
+      <h1>Chai Chess</h1>
       <p class="lede">Replay the classics with notes at two levels and a Stockfish engine alongside. Paste in your own games for a review, test yourself on the masters' moves, or play the engine at a strength that suits you.</p>
     </div>
     <div class="tools">
@@ -398,12 +400,15 @@ textarea{width:100%;min-height:150px;resize:vertical}
   </div>
 </section>
 </div>
+<footer class="sitefoot"><span>A Chai Publications Project</span><button type="button" id="replayIntro">Replay intro</button></footer>
 <div class="toast" id="toast" hidden></div>
 
 <script src="chess.js"></script>
 <script>window.CHAI_STANDALONE = true;</script>
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="intro.js"></script>
+<script>document.getElementById("replayIntro").onclick = () => window.chaiIntro && window.chaiIntro();</script>
 
 </body>
 </html>

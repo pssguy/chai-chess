@@ -106,9 +106,13 @@
 #chai-intro button:hover{border-color:#E4E9EB}
 #chai-intro button:focus-visible{outline:2px solid #E0A845;outline-offset:2px}`;
     document.head.appendChild(st); document.body.appendChild(ov);
-    const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d'), gateEl = ov.querySelector('.ci-gate'), sb = ov.querySelector('.ci-sound');
-    let Wc = 0, Hc = 0, dpr = 1;
-    const size = () => { dpr = window.devicePixelRatio || 1; Wc = ov.clientWidth; Hc = ov.clientHeight; cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr); };
+    document.documentElement.classList.remove('intro-pending');
+    const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d', { alpha: false }), gateEl = ov.querySelector('.ci-gate'), sb = ov.querySelector('.ci-sound');
+    let Wc = 0, Hc = 0, dpr = 1, bgGrad = null;
+    const size = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2); Wc = ov.clientWidth; Hc = ov.clientHeight; cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr);
+      bgGrad = ctx.createRadialGradient(Wc / 2, Hc / 2, 50, Wc / 2, Hc / 2, Math.max(Wc, Hc) * .75); bgGrad.addColorStop(0, '#1F292E'); bgGrad.addColorStop(1, '#12171A');
+    };
     size(); window.addEventListener('resize', size);
     const img = {}; for (const k in PIECES) { const i = new Image(); i.src = PIECES[k]; img[k] = i; }
 
@@ -127,10 +131,11 @@
     sb.onclick = e => { e.stopPropagation(); if (!soundOn) unlockFromGesture(); soundOn = !soundOn; showMute(); };
 
     const begin = () => {                    // start (or continue) the pieces with sound
-      if (phase === 'play' || done) return;
-      unlockFromGesture(); soundOn = true;
-      phase = 'play'; ov.classList.remove('gated'); gateEl.hidden = true; showMute();
-      t0 = null; offset = HOLD;              // carry on from the frozen board
+      if (phase !== 'gate' || done) return;
+      phase = 'starting'; unlockFromGesture(); soundOn = true;
+      ov.classList.remove('gated'); gateEl.hidden = true; showMute();
+      const a = AC, ready = a && a.state !== 'running' ? Promise.race([a.resume().catch(() => { }), new Promise(r => setTimeout(r, 400))]) : Promise.resolve();
+      ready.then(() => { if (done) return; phase = 'play'; t0 = null; offset = HOLD; });   // carry on from the frozen board once audio is live
     };
     const onKey = e => {
       if (e.key === 'Escape') { finish(); return; }
@@ -157,14 +162,14 @@
       if (t0 == null) t0 = now;
       let t = offset + (now - t0) / 1000;
       if (phase !== 'play') t = Math.min(t, HOLD);
+      if (phase === 'starting') t = HOLD;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const g = ctx.createRadialGradient(Wc / 2, Hc / 2, 50, Wc / 2, Hc / 2, Math.max(Wc, Hc) * .75); g.addColorStop(0, '#1F292E'); g.addColorStop(1, '#12171A');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, Wc, Hc);
+      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, Wc, Hc);
 
       const lift = easeInOut(seg(t, ...LIFT));
       const S0 = Math.min(Wc * .86, Hc * .66), S = S0 * (1 - .34 * lift);
       const x = (Wc - S) / 2, y = (Hc - S0) / 2 - lift * Hc * .07, q = S / 8;
-      if (phase === 'gate') gateEl.style.top = Math.round(y + S0 + Math.min(40, Hc * .05)) + 'px';
+      if (phase === 'gate' || phase === 'probe') gateEl.style.top = Math.round(y + S0 + Math.min(40, Hc * .05)) + 'px';
       const shA = seg(t, .5, 1.0);
       if (shA > 0) { ctx.save(); ctx.shadowColor = `rgba(0,0,0,${.55 * shA})`; ctx.shadowBlur = S * .08; ctx.shadowOffsetY = S * .03; ctx.fillStyle = '#7B93A2'; ctx.fillRect(x + 1, y + 1, S - 2, S - 2); ctx.restore(); }
       for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
@@ -190,15 +195,26 @@
       if (t >= FADE[0]) { finish(); return; }
       raf = requestAnimationFrame(frame);
     }
-    const fonts = document.fonts && document.fonts.load ? Promise.race([document.fonts.load('800 100px "Big Shoulders Display"'), new Promise(r => setTimeout(r, 1200))]).catch(() => { }) : Promise.resolve();
-    raf = requestAnimationFrame(frame);      // the board starts rippling in while we check
-    Promise.all([probeSound(), fonts]).then(([ok]) => {
+    // Get everything ready first (fonts, decoded piece images, sound check) so the
+    // animation runs smoothly from its first frame; the overlay stays plain dark meanwhile.
+    const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
+    const fonts = document.fonts && document.fonts.load ? within(Promise.all([document.fonts.load('800 100px "Big Shoulders Display"'), document.fonts.load('500 15px "IBM Plex Mono"')]), 1500).catch(() => { }) : Promise.resolve();
+    const decoded = within(Promise.all(Object.values(img).map(i => (i.decode ? i.decode() : Promise.resolve()).catch(() => { }))), 1500);
+    Promise.all([probeSound(), fonts, decoded]).then(([ok]) => {
       if (done) return;
-      if (ok) { soundOn = true; phase = 'play'; showMute(); t0 = null; offset = HOLD; }
+      if (ok) { soundOn = true; phase = 'play'; showMute(); }
       else { phase = 'gate'; ov.classList.add('gated'); gateEl.hidden = false; }
+      t0 = null; raf = requestAnimationFrame(frame);
     });
   }
 
+  const reveal = () => document.documentElement.classList.remove('intro-pending');
   window.chaiIntro = () => { try { sessionStorage.removeItem(KEY); } catch (e) { } run(); };
-  if (!seen && !reduce && typeof PIECES !== 'undefined') run();
+  if (!seen && !reduce && typeof PIECES !== 'undefined') {
+    // Start once the page's own start-up work is done (this script runs last), giving the
+    // browser a couple of frames to settle so the two don't compete.
+    const go = () => requestAnimationFrame(() => requestAnimationFrame(() => run()));
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
+    setTimeout(reveal, 10000);             // safety net: never leave the page hidden
+  } else reveal();
 })();

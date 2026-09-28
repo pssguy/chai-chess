@@ -102,7 +102,7 @@ class Board {
     const b = parseFen(this.fen), n = this.node; n.innerHTML = ''; n.classList.toggle('interactive', !!this.interactive);
     let chk = null;
     if (this.interactive || this.opts.showCheck) { const c = new Chess(this.fen); if (c.in_check()) { const t = c.turn(); for (const s in b) if (b[s] === (t === 'w' ? 'K' : 'k')) chk = s; } }
-    const targets = this.sel ? this._targets(this.sel) : {};
+    const targets = this.sel ? (this.opts.dotTargets ? this.opts.dotTargets(this.sel) : this._targets(this.sel)) : {};
     for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
       const sq = this.sqAt(r, f), file = FILES.indexOf(sq[0]), rank = +sq[1];
       const d = el('div', 'sq ' + (((file + rank) % 2 === 1) ? 'l' : 'd'));
@@ -114,10 +114,11 @@ class Board {
       if (f === 0 && !this.opts.noCoords) d.appendChild(el('span', 'coord r', rank));
       if (r === 7 && !this.opts.noCoords) d.appendChild(el('span', 'coord f', sq[0]));
       if (b[sq]) { const i = el('img'); i.src = PIECES[b[sq]]; i.alt = b[sq]; i.draggable = false; d.appendChild(i); }
+      if (this.opts.decorate) this.opts.decorate(sq, d);
       n.appendChild(d);
     }
   }
-  _targets(from) { const c = new Chess(this.fen); const t = {}; c.moves({ square: from, verbose: true }).forEach(m => t[m.to] = true); return t; }
+  _targets(from) { if (this.opts.targets) return this.opts.targets(from); const c = new Chess(this.fen); const t = {}; c.moves({ square: from, verbose: true }).forEach(m => t[m.to] = true); return t; }
   _own(sq) { const p = parseFen(this.fen)[sq]; if (!p) return false; const w = p === p.toUpperCase(); return (turnOf(this.fen) === 'w') === w && (!this.opts.side || this.opts.side() === turnOf(this.fen) || this.opts.side() === 'both'); }
   _sqFromEvent(e) { const t = document.elementFromPoint(e.clientX, e.clientY); const s = t && t.closest && t.closest('.sq'); return s && this.node.contains(s) ? s.dataset.sq : null; }
   _down(e) {
@@ -139,7 +140,7 @@ class Board {
   _try(from, to) {
     const c = new Chess(this.fen); const p = c.get(from);
     const promo = p && p.type === 'p' && (to[1] === '8' || to[1] === '1');
-    const done = pr => { this.sel = null; const m = c.move({ from, to, promotion: pr || 'q' }); if (m && this.opts.onMove) this.opts.onMove(m, c.fen()); else this.render(); };
+    const done = pr => { this.sel = null; if (this.opts.customMove) return this.opts.customMove(from, to, pr || 'q'); const m = c.move({ from, to, promotion: pr || 'q' }); if (m && this.opts.onMove) this.opts.onMove(m, c.fen()); else this.render(); };
     if (!promo) return done();
     const box = el('div', 'promo'); const col = p.color;
     ['q', 'r', 'b', 'n'].forEach(t => { const b = el('button'); const i = el('img'); i.src = PIECES[col === 'w' ? t.toUpperCase() : t]; i.alt = t; b.appendChild(i); b.onclick = ev => { ev.stopPropagation(); box.remove(); done(t); }; box.appendChild(b); });
@@ -205,15 +206,16 @@ function gamePgn(g, level) {
 }
 
 /* ============ router ============ */
-const VIEWS = ['home', 'game', 'import', 'analysis', 'play', 'puzzles'];
+const VIEWS = ['home', 'game', 'import', 'analysis', 'play', 'puzzles', 'kids', 'secret'];
 let view = 'home';
 function show(v) {
   if (view === 'analysis' && v !== 'analysis') engineA().stop();
   if (view === 'game' && v !== 'game') { G.stopAuto(); }
   view = v; VIEWS.forEach(x => $('v-' + x).hidden = x !== v);
-  document.querySelectorAll('nav.top .links button').forEach(b => b.classList.toggle('on', b.dataset.nav === v || (v === 'game' && b.dataset.nav === 'home')));
+  document.querySelectorAll('nav.top .links button').forEach(b => b.classList.toggle('on', b.dataset.nav === v || (v === 'game' && b.dataset.nav === 'home') || (v === 'secret' && b.dataset.nav === 'play')));
   window.scrollTo(0, 0);
   if (v === 'analysis') A.enter(); if (v === 'play') P.enter(); if (v === 'puzzles') Z.enter();
+  if (v === 'kids' && typeof KIDS !== 'undefined') KIDS.enter(); if (v === 'secret' && typeof SQ !== 'undefined') SQ.enter();
 }
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
 $('brand').onclick = () => show('home');
@@ -542,17 +544,32 @@ const LEVELS = [
   { name: '~2400 · Master', elo: 2400, movetime: 900 },
   { name: 'Full strength (3000+)', movetime: 1500 },
 ];
+const TIME_CONTROLS = [
+  { id: 'none', name: 'No clock' },
+  { id: '1+0', name: '1 min (bullet)', base: 60, inc: 0 },
+  { id: '3+2', name: '3 min + 2 s (blitz)', base: 180, inc: 2 },
+  { id: '5+3', name: '5 min + 3 s (blitz)', base: 300, inc: 3 },
+  { id: '10+0', name: '10 min (rapid)', base: 600, inc: 0 },
+  { id: '15+10', name: '15 min + 10 s (rapid)', base: 900, inc: 10 },
+];
+function fmtClock(ms) {
+  ms = Math.max(0, ms);
+  if (ms < 10000) return (ms / 1000).toFixed(1);
+  const s = Math.ceil(ms / 1000), m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0');
+}
 const P = {
   c: null, you: 'w', over: false, thinking: false, colourPick: 'w',
+  tc: null, clock: null, running: null, lastTick: 0, started: false, timer: null,
   init() {
     LEVELS.forEach((l, i) => { const o = el('option', '', l.name); o.value = i; $('pLevel').appendChild(o); }); $('pLevel').value = 2;
+    TIME_CONTROLS.forEach(t => { const o = el('option', '', t.name); o.value = t.id; $('pTime').appendChild(o); }); $('pTime').value = 'none';
     this.board = new Board($('pBoard'), { onMove: m => this.userMove(m), side: () => this.you });
     [['cW', 'w'], ['cB', 'b'], ['cR', 'r']].forEach(([id, v]) => $(id).onclick = () => { this.colourPick = v; ['cW', 'cB', 'cR'].forEach(x => $(x).classList.toggle('on', x === id)); });
     $('pNew').onclick = () => this.newGame();
-    $('pTake').onclick = () => { if (this.thinking || !this.c) return; engineA().stop(); this.c.undo(); if (this.c.turn() !== this.you) this.c.undo(); this.over = false; this.update(); };
-    $('pResign').onclick = () => { if (!this.c || this.over) return; this.over = true; this.result = this.you === 'w' ? '0-1' : '1-0'; $('pStatus').textContent = 'You resigned.'; this.update(); };
+    $('pTake').onclick = () => { if (this.thinking || !this.c || this.tc) return; engineA().stop(); this.c.undo(); if (this.c.turn() !== this.you) this.c.undo(); this.over = false; this.update(); };
+    $('pResign').onclick = () => { if (!this.c || this.over) return; this.end(this.you === 'w' ? '0-1' : '1-0', 'You resigned.'); };
     $('pReview').onclick = () => {
-      const c = this.c; const g = { user: true, white: this.you === 'w' ? 'You' : 'Stockfish ' + LEVELS[this.level].name, black: this.you === 'b' ? 'You' : 'Stockfish ' + LEVELS[this.level].name, event: 'Game against the engine', date: new Date().toISOString().slice(0, 10), result: this.result || '*', flip: this.you === 'b', fens: [new Chess().fen()], sans: [], ucis: [], lines: [], notes: {} };
+      const c = this.c; const g = { user: true, white: this.you === 'w' ? 'You' : 'Stockfish ' + LEVELS[this.level].name, black: this.you === 'b' ? 'You' : 'Stockfish ' + LEVELS[this.level].name, event: 'Game against the engine' + (this.tc ? ' · ' + this.tc.id : ''), date: new Date().toISOString().slice(0, 10), result: this.result || '*', flip: this.you === 'b', fens: [new Chess().fen()], sans: [], ucis: [], lines: [], notes: {} };
       const t = new Chess(); c.history({ verbose: true }).forEach(m => { t.move(m.san); g.sans.push(m.san); g.ucis.push(m.from + m.to + (m.promotion || '')); g.fens.push(t.fen()); });
       if (!g.sans.length) { toast('No moves to review'); return; }
       importAndReview(g);
@@ -561,35 +578,92 @@ const P = {
   enter() { if (!this.c) { this.board.set(new Chess().fen(), [], false); this.names(); } },
   names() {
     const eng = 'Stockfish', lv = LEVELS[this.level ?? +$('pLevel').value].name;
-    $('pTop').innerHTML = ''; $('pBot').innerHTML = '';
-    const set = (n, a, b) => { n.appendChild(el('span', '', a)); n.appendChild(el('small', '', b)); };
-    if (this.you === 'w') { set($('pTop'), eng, lv + ' · Black'); set($('pBot'), 'You', 'White'); }
-    else { set($('pTop'), eng, lv + ' · White'); set($('pBot'), 'You', 'Black'); }
+    const set = (n, a, b, side) => {
+      n.innerHTML = ''; const d = el('div', 'pname'); d.appendChild(el('span', '', a)); d.appendChild(el('small', '', b)); n.appendChild(d);
+      const ck = el('span', 'clock'); ck.dataset.side = side; ck.hidden = !this.tc; n.appendChild(ck);
+    };
+    const engSide = this.you === 'w' ? 'b' : 'w';
+    set($('pTop'), eng, lv + (engSide === 'w' ? ' · White' : ' · Black'), engSide);
+    set($('pBot'), 'You', this.you === 'w' ? 'White' : 'Black', this.you);
+    this.drawClocks();
   },
   newGame() {
-    engineA().stop();
+    engineA().stop(); this.stopClock();
     this.you = this.colourPick === 'r' ? (Math.random() < .5 ? 'w' : 'b') : this.colourPick; this.level = +$('pLevel').value;
+    const T = TIME_CONTROLS.find(t => t.id === $('pTime').value); this.tc = T && T.base ? T : null;
+    this.clock = this.tc ? { w: this.tc.base * 1000, b: this.tc.base * 1000 } : null; this.running = null; this.started = false;
+    $('pTake').disabled = !!this.tc; $('pTake').title = this.tc ? 'No takebacks in timed games' : 'Take back your last move';
     this.c = new Chess(); this.over = false; this.result = null; this.board.flipped = this.you === 'b'; $('pReview').hidden = true; this.names();
-    $('pStatus').textContent = this.you === 'w' ? 'Your move. You have White.' : 'Stockfish is thinking…';
+    $('pStatus').textContent = this.you === 'w' ? 'Your move. You have White.' + (this.tc ? ' The clocks start after White\'s first move.' : '') : 'Stockfish is thinking…';
     this.update(); if (this.c.turn() !== this.you) this.engineMove();
   },
-  userMove(m) { if (this.over || this.thinking) return; this.c.move(m.san); this.update(); if (!this.checkEnd()) this.engineMove(); },
+  /* ---- clocks ---- */
+  settle() { if (this.running && this.clock) { const now = performance.now(); this.clock[this.running] -= now - this.lastTick; this.lastTick = now; } },
+  moved(side) {                         // call right after `side` completed a move
+    if (!this.tc || this.over) return;
+    this.settle();
+    if (this.started) this.clock[side] += this.tc.inc * 1000;
+    else if (side === 'w') this.started = true;
+    this.running = this.started ? (side === 'w' ? 'b' : 'w') : null; this.lastTick = performance.now();
+    if (this.running && !this.timer) this.timer = setInterval(() => this.tick(), 100);
+    this.drawClocks();
+  },
+  tick() {
+    if (!this.running) return; this.settle();
+    if (this.clock[this.running] <= 0) {
+      this.clock[this.running] = 0; const loser = this.running;
+      const other = loser === 'w' ? 'b' : 'w';
+      const board = this.c.board().flat().filter(Boolean);
+      const canMate = board.some(p => p.color === other && p.type !== 'k');
+      engineA().stop(); this.thinking = false;
+      const youLost = loser === this.you;
+      if (!canMate) this.end('1/2-1/2', (youLost ? 'Your' : 'Stockfish\'s') + ' flag fell, but the other side has only a king left, so it is a draw.');
+      else this.end(loser === 'w' ? '0-1' : '1-0', youLost ? 'Out of time. Stockfish wins on the clock.' : 'Stockfish ran out of time. You win on the clock!');
+    }
+    this.drawClocks();
+  },
+  stopClock() { this.settle(); this.running = null; if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+  drawClocks() {
+    document.querySelectorAll('#v-play .clock').forEach(ck => {
+      ck.hidden = !this.tc; if (!this.tc || !this.clock) return;
+      const s = ck.dataset.side, ms = this.clock[s];
+      ck.textContent = fmtClock(ms); ck.classList.toggle('run', this.running === s && !this.over); ck.classList.toggle('low', ms < 20000);
+    });
+  },
+  budget(L) {                           // how long the engine may think for this move (ms)
+    const want = L.movetime || 600;
+    if (!this.tc) return want;
+    const side = this.you === 'w' ? 'b' : 'w', left = this.clock[side], inc = this.tc.inc * 1000;
+    return Math.max(80, Math.min(want, left / 35 + inc * .7));
+  },
+  end(result, msg) {
+    this.stopClock(); this.over = true; this.result = result; $('pStatus').textContent = msg; this.update(); this.drawClocks();
+  },
+  userMove(m) {
+    if (this.over || this.thinking) return;
+    this.c.move(m.san); this.moved(this.you); this.update();
+    if (!this.checkEnd()) this.engineMove();
+  },
   async engineMove() {
     this.thinking = true; $('pStatus').textContent = 'Stockfish is thinking…'; this.update();
-    const L = LEVELS[this.level], fen = this.c.fen(); const t0 = Date.now();
+    const L = LEVELS[this.level], fen = this.c.fen(); const t0 = Date.now(); const budget = this.budget(L);
     let mv = null;
-    if (L.random && Math.random() < L.random) { const ms = this.c.moves({ verbose: true }); const m = ms[Math.floor(Math.random() * ms.length)]; mv = m.from + m.to + (m.promotion || ''); await new Promise(r => setTimeout(r, 500)); }
-    else { const r = await engineA().search(fen, { skill: L.skill, elo: L.elo, depth: L.depth, movetime: L.movetime }); if (r.cancelled || r.failed) { this.thinking = false; if (r.failed) $('pStatus').textContent = 'The engine could not start in this browser.'; return; } mv = r.bestmove; const wait = 450 - (Date.now() - t0); if (wait > 0) await new Promise(r => setTimeout(r, wait)); }
-    if (this.c.fen() !== fen) { this.thinking = false; return; }
+    if (L.random && Math.random() < L.random) { const ms = this.c.moves({ verbose: true }); const m = ms[Math.floor(Math.random() * ms.length)]; mv = m.from + m.to + (m.promotion || ''); await new Promise(r => setTimeout(r, Math.min(500, budget))); }
+    else {
+      const r = await engineA().search(fen, { skill: L.skill, elo: L.elo, depth: L.depth, movetime: L.depth ? undefined : budget });
+      if (r.cancelled || r.failed) { this.thinking = false; if (r.failed) $('pStatus').textContent = 'The engine could not start in this browser.'; return; }
+      mv = r.bestmove; const wait = Math.min(450, budget) - (Date.now() - t0); if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    }
+    if (this.c.fen() !== fen || this.over) { this.thinking = false; return; }
     this.c.move({ from: mv.slice(0, 2), to: mv.slice(2, 4), promotion: mv[4] || 'q' });
+    this.moved(this.you === 'w' ? 'b' : 'w');
     this.thinking = false; this.update(); if (!this.checkEnd()) $('pStatus').textContent = 'Your move.';
   },
   checkEnd() {
     const c = this.c; if (!c.game_over()) return false;
-    this.over = true;
-    if (c.in_checkmate()) { const youWon = c.turn() !== this.you; this.result = c.turn() === 'w' ? '0-1' : '1-0'; $('pStatus').textContent = youWon ? 'Checkmate. You won.' : 'Checkmate. Stockfish wins this one.'; }
-    else { this.result = '1/2-1/2'; $('pStatus').textContent = c.in_stalemate() ? 'Stalemate. Draw.' : c.in_threefold_repetition() ? 'Draw by repetition.' : c.insufficient_material() ? 'Draw: not enough material to mate.' : 'Draw.'; }
-    this.update(); return true;
+    if (c.in_checkmate()) { const youWon = c.turn() !== this.you; this.end(c.turn() === 'w' ? '0-1' : '1-0', youWon ? 'Checkmate. You won.' : 'Checkmate. Stockfish wins this one.'); }
+    else this.end('1/2-1/2', c.in_stalemate() ? 'Stalemate. Draw.' : c.in_threefold_repetition() ? 'Draw by repetition.' : c.insufficient_material() ? 'Draw: not enough material to mate.' : 'Draw.');
+    return true;
   },
   update() {
     const c = this.c; if (!c) return; const h = c.history({ verbose: true }); const last = h[h.length - 1];

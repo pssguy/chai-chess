@@ -1,0 +1,6 @@
+# Private notes and build source: never publish
+_working/
+
+# Windows clutter
+Thumbs.db
+desktop.ini

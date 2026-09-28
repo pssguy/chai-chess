@@ -50,6 +50,13 @@
     ns.buffer = nb; nf.type = 'bandpass'; nf.frequency.value = freq * 3; ng.gain.value = .06;
     ns.connect(nf); nf.connect(ng); ng.connect(out); ns.start(t);
   }
+  // shared piano for the rest of the site (kids' corner etc.): window.chaiPiano('E5', .5, delaySeconds)
+  const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const noteHz = n => { const m = /^([A-G])(#?)(\d)$/.exec(n); if (!m) return 440; return 440 * Math.pow(2, (12 * (+m[3] + 1) + SEMI[m[1]] + (m[2] ? 1 : 0) - 69) / 12); };
+  window.chaiPiano = (n, vel = .5, when = 0) => {
+    const a = audioInit(); if (!a) return; if (a.state !== 'running') a.resume();
+    const was = soundOn; soundOn = true; piano(typeof n === 'number' ? n : noteHz(n), vel, when); soundOn = was;
+  };
   // value -> note: the more valuable the piece, the lower the note (a C major chord)
   const NOTE = { p: 'E5', n: 'C5', b: 'C5', r: 'G4', q: 'C4', k: 'C3' };
 

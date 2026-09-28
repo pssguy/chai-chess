@@ -6,6 +6,8 @@ Famous chess games with beginner and expert commentary, Stockfish analysis in th
 - `index.html` – the page
 - `app.js` – the app
 - `intro.js` – the opening animation with piano notes (once per visit)
+- `kids.js` – Kids' Corner: piece lessons and Pawn Race
+- `secret.js` – Secret Queen, the two-player hidden-queen variant
 - `data.js` – the ten games, engine analysis, commentary and puzzles
 - `chess.js` – move rules (chess.js 0.10.3, BSD licence)
 - `stockfish.js`, `stockfish.wasm` – Stockfish 18 lite, single-threaded WebAssembly build (GPLv3, see `COPYING-stockfish.txt`; source: https://github.com/official-stockfish/Stockfish and https://github.com/nmrugg/stockfish.js)

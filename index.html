@@ -91,6 +91,12 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .boardcol{display:flex;flex-direction:column;gap:10px;min-width:0}
 .player{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:.03em;text-transform:uppercase}
 .player small{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;text-align:right}
+.player .pname{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.player .pname small{text-align:left}
+.clock{font-family:var(--mono);font-weight:600;font-size:22px;letter-spacing:0;padding:2px 12px;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-variant-numeric:tabular-nums;min-width:5.2ch;text-align:center}
+.clock.run{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.clock.low{color:var(--bad)}
+.clock.run.low{background:var(--bad);color:#fff;border-color:var(--bad)}
 .boardrow{display:flex;gap:8px;align-items:stretch}
 .evalbar{width:20px;flex:none;border-radius:3px;overflow:hidden;position:relative;background:var(--bar-black);border:1px solid var(--line)}
 .evalbar .w{position:absolute;left:0;right:0;bottom:0;background:var(--bar-white);transition:height .35s ease}
@@ -176,6 +182,63 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .plist .done{color:var(--good)}
 .sitefoot{max-width:1200px;margin:40px auto 0;padding-top:14px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .sitefoot button{font-size:12px;padding:5px 10px}
+/* timed games, secret queen */
+.turnpill{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:3px}
+.sq-crown{position:absolute;top:2%;right:2%;width:34%;height:34%;z-index:2;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.sq-crown svg{width:100%;height:100%}
+.sq.sq-secret::before{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 3px #E0A845}
+.scover{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:rgba(18,24,27,.94);border-radius:3px;text-align:center;padding:24px;color:#E4E9EB}
+.scover h3{font-size:28px;margin-bottom:10px}
+.scover p{max-width:36ch;margin:0 auto 16px;color:#B8C4CA}
+.scover .primary{background:#E0A845;border-color:#E0A845;color:#151B1F}
+.rules{margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:16px}
+button.card.tool{text-align:left;display:flex;flex-direction:column;gap:6px;font-family:var(--body);font-size:15px}
+button.card.tool b{font-family:var(--display);font-size:21px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+button.card.tool span{color:var(--muted)}
+button.linkish{border:0;background:none;padding:0;text-decoration:underline;color:var(--muted);font-size:12px}
+/* kids */
+:root{--k-light:#F4E6C9;--k-dark:#C9975F;--k-ok:#3E7C57}
+.kstars{font-family:var(--display);font-weight:800;font-size:26px;color:var(--accent)}
+.kgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.kgrid{grid-template-columns:1fr}.kpick{flex-direction:row!important;overflow-x:auto;padding-bottom:6px}.kcard{flex:0 0 190px}}
+.kpick{display:flex;flex-direction:column;gap:8px}
+.kcard{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:10px;font-family:var(--body)}
+.kcard img{width:44px;height:44px;flex:none}
+.kcard .ktxt{display:flex;flex-direction:column;min-width:0}
+.kcard b{font-family:var(--display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.02em}
+.kcard small{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.kcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.kcard.race{margin-top:6px}
+.kpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.khead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px 16px;flex-wrap:wrap;margin-bottom:12px}
+.khead h3{font-size:30px}
+.kworth{margin:4px 0 0;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.klevels{display:flex;gap:6px;flex-wrap:wrap}
+.klv{border-radius:999px;font-size:13px;padding:6px 12px}
+.klv.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.kbody{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:760px){.kbody{grid-template-columns:1fr}}
+.kboardwrap{width:100%;max-width:440px}
+.kboard{width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border-radius:10px;overflow:hidden;border:3px solid #8A5E36;user-select:none;touch-action:manipulation}
+.ksq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0}
+.ksq.l{background:var(--k-light)} .ksq.d{background:var(--k-dark)}
+.ksq.last::before{content:"";position:absolute;inset:0;background:rgba(224,168,69,.35)}
+.kpiece{width:90%;height:90%;position:relative;z-index:1;pointer-events:none;transition:transform .15s}
+.kpiece.sel{transform:scale(1.08);filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.kstar{position:absolute;inset:14%;z-index:0;animation:kbob 1.6s ease-in-out infinite}
+.kstar svg{width:100%;height:100%}
+@keyframes kbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6%)}}
+@media (prefers-reduced-motion: reduce){.kstar{animation:none}}
+.kdot{position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(62,124,87,.55);z-index:2;pointer-events:none}
+.kdot.cap{width:86%;height:86%;background:none;border:4px solid rgba(62,124,87,.7)}
+.kco{position:absolute;font-family:var(--mono);font-size:10px;font-weight:600;color:rgba(80,50,20,.55);pointer-events:none}
+.kco.r{top:2px;left:3px} .kco.f{bottom:1px;right:3px}
+.ktext p{margin:0 0 8px;font-size:18px}
+.kgoal{font-weight:600;font-size:17px;margin:10px 0 4px}
+.kcount{font-family:var(--mono);font-size:14px;color:var(--muted);margin:0}
+.kmsg{min-height:1.5em;font-size:19px;font-weight:600;color:var(--k-ok);margin:10px 0}
+.kmsg.hint{color:var(--ink);background:rgba(62,124,87,.12);border-left:4px solid var(--k-ok);padding:6px 10px;border-radius:4px}
+.kmsg.oops{color:var(--bad)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:4px;z-index:60}
 @media (prefers-reduced-motion: reduce){.evalbar .w,.progress div{transition:none}}
 </style>
@@ -189,6 +252,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
     <button data-nav="analysis">Analysis board</button>
     <button data-nav="play">Play</button>
     <button data-nav="puzzles">Puzzles</button>
+    <button data-nav="kids">Kids</button>
   </div>
 </nav>
 
@@ -198,13 +262,15 @@ textarea{width:100%;min-height:150px;resize:vertical}
     <div>
       <p class="eyebrow">Ten games that changed chess · commentary for beginners and club players</p>
       <h1>Chai Chess</h1>
-      <p class="lede">Replay the classics with notes at two levels and a Stockfish engine alongside. Paste in your own games for a review, test yourself on the masters' moves, or play the engine at a strength that suits you.</p>
+      <p class="lede">Replay the classics with notes at two levels and a Stockfish engine alongside. Paste in your own games for a review, test yourself on the masters' moves, play the engine with or without a clock, or learn the pieces in the Kids' Corner.</p>
     </div>
     <div class="tools">
       <button class="tool" data-nav="import"><b>Your game</b><span>Paste a PGN from Lichess, Chess.com or anywhere. Full engine review, run in your browser.</span></button>
       <button class="tool" data-nav="play"><b>Play the engine</b><span>Seven levels, from about 800 to full strength. Review the game afterwards.</span></button>
       <button class="tool" data-nav="puzzles"><b>Puzzles</b><span>Find the winning move from the key moments of these games.</span></button>
       <button class="tool" data-nav="analysis"><b>Analysis board</b><span>Set up any position, make moves, and see what the engine thinks.</span></button>
+      <button class="tool" data-nav="kids"><b>Kids' Corner</b><span>Meet the pieces, collect the stars, and race the computer with pawns.</span></button>
+      <button class="tool" data-nav="secret"><b>Secret Queen</b><span>Two players, one screen. One of your pawns is secretly a queen.</span></button>
     </div>
   </div>
   <div style="height:22px"></div>
@@ -365,7 +431,9 @@ textarea{width:100%;min-height:150px;resize:vertical}
         <div class="row"><span class="status">You play</span><div class="seg"><button id="cW" class="on">White</button><button id="cB">Black</button><button id="cR">Random</button></div></div>
         <div style="height:10px"></div>
         <div class="row"><span class="status">Engine strength</span><select id="pLevel"></select></div>
-        <p class="status" style="margin-top:8px">Ratings are approximate. The lowest two levels also play the odd random move on purpose, as beginners do.</p>
+        <div style="height:10px"></div>
+        <div class="row"><span class="status">Clock</span><select id="pTime"></select></div>
+        <p class="status" style="margin-top:8px">Ratings are approximate. The lowest two levels also play the odd random move on purpose, as beginners do. With a clock, the engine plays on its own clock too, and there are no takebacks.</p>
       </div>
       <div class="card">
         <p class="eyebrow">Game</p>
@@ -373,6 +441,85 @@ textarea{width:100%;min-height:150px;resize:vertical}
         <div class="row" style="margin-top:10px"><button id="pReview" hidden class="primary">Review this game</button></div>
         <div style="height:10px"></div>
         <div class="moves" id="pMoves"></div>
+      </div>
+      <button class="card tool" data-nav="secret"><b>Secret Queen</b><span>Playing a friend on one screen? Try the variant where one pawn is secretly a queen.</span></button>
+    </div>
+  </div>
+</section>
+
+
+<!-- KIDS -->
+<section id="v-kids" hidden>
+  <div class="ghead">
+    <div><p class="eyebrow">For young players</p><h2>Kids' Corner</h2><p class="lede" style="margin-top:6px">Learn how each piece moves by collecting stars, then race the computer with pawns.</p></div>
+    <div class="row"><span class="kstars">★ <b id="kTotal">0</b></span><button id="kSound" aria-pressed="true">♪ Sound: on</button></div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="kgrid">
+    <div class="kpick" id="kPick"></div>
+    <div id="kLesson" class="kpanel">
+      <div class="khead"><div><h3 id="kTitle"></h3><p class="kworth" id="kWorth"></p></div><div class="klevels" id="kLevels"></div></div>
+      <div class="kbody">
+        <div class="kboardwrap"><div class="kboard" id="kBoard" aria-label="Lesson board"></div></div>
+        <div class="kside">
+          <div class="ktext" id="kText"></div>
+          <p class="kgoal" id="kGoal"></p>
+          <p class="kcount" id="kCount"></p>
+          <p class="kmsg" id="kMsg" aria-live="polite"></p>
+          <div class="row"><button id="kRetry">Try again</button><button id="kNext" class="primary" hidden>Next level</button></div>
+        </div>
+      </div>
+    </div>
+    <div id="kRace" class="kpanel" hidden>
+      <div class="khead"><div><h3>Pawn Race</h3><p class="kworth">Only pawns. Get one of yours to the far side before the computer does.</p></div>
+        <div class="row"><select id="kRaceLevel" aria-label="Computer strength"><option value="easy">Friendly computer</option><option value="hard">Tricky computer</option></select><button id="kRaceNew">New race</button></div></div>
+      <div class="kbody">
+        <div class="kboardwrap"><div class="kboard" id="kRaceBoard" aria-label="Pawn race board"></div></div>
+        <div class="kside">
+          <div class="ktext"><p>You are White and move first. Tap a pawn, then tap a dot.</p><p>Pawns move forward one square (two on their first move) and capture one square diagonally forward.</p><p>If a player can't move at all, the other player wins.</p></div>
+          <p class="kcount" id="kRaceCount"></p>
+          <p class="kmsg" id="kRaceMsg" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="foot" style="margin-top:14px">Stars are saved in this browser only. <button id="kReset" class="linkish">Start again</button></p>
+</section>
+
+<!-- SECRET QUEEN -->
+<section id="v-secret" hidden>
+  <div class="ghead"><div><p class="eyebrow">Two players · one screen</p><h2>Secret Queen</h2></div><div class="meta">A bluffing variant of chess</div></div>
+  <div style="height:16px"></div>
+  <div class="main">
+    <div class="boardcol">
+      <div class="player" id="sTop"></div>
+      <div class="boardrow" style="position:relative">
+        <div class="board" id="sBoard" aria-label="Secret Queen board"></div>
+        <div class="scover" id="sCover" hidden><div><h3 id="sCoverTitle"></h3><p id="sCoverSub"></p><button class="primary" id="sCoverBtn"></button></div></div>
+      </div>
+      <div class="player" id="sBot"></div>
+      <div class="controls"><button id="sPeek" class="primary">Hold to peek at your queen</button><span class="spacer"></span><button id="sFlip">Flip</button><button id="sNew">New game</button></div>
+    </div>
+    <div class="side">
+      <div class="card">
+        <p class="eyebrow">Game</p>
+        <p class="feedback" id="sStatus"></p>
+        <div class="row" id="sPickBar" hidden style="margin-top:10px"><button class="primary" id="sPickConfirm" disabled>Confirm my secret pawn</button></div>
+        <div class="row" id="sConfirmBar" hidden style="margin-top:10px"><button class="primary" id="sYes">Reveal and move</button><button id="sNo">Cancel</button></div>
+        <div style="height:10px"></div>
+        <div class="moves" id="sMoves"></div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">How to play</p>
+        <ol class="rules">
+          <li>There are no queens at the start. Each player secretly chooses one of their pawns to be their Secret Queen.</li>
+          <li>It looks and moves like a pawn until you move it like a queen. Then it is revealed and becomes a normal queen.</li>
+          <li>Ordinary pawn moves (one or two squares forward, or a diagonal capture) keep the secret. Reaching the far side reveals it.</li>
+          <li>You can't see your opponent's Secret Queen, so you might leave your king open to it. If you do, it can capture your king, and that wins the game.</li>
+          <li>Otherwise the normal rules apply: checkmate wins, and castling and en passant are allowed.</li>
+          <li>Hold "Peek" on your turn to see which pawn is yours, while the other player looks away.</li>
+        </ol>
+        <p class="status">House rules: there's no single official version of this variant, so sites differ in the details.</p>
       </div>
     </div>
   </div>
@@ -409,6 +556,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 <script>window.CHAI_STANDALONE = true;</script>
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="kids.js"></script>
+<script src="secret.js"></script>
 <script src="intro.js"></script>
 <script>document.getElementById("replayIntro").onclick = () => window.chaiIntro && window.chaiIntro();</script>
 

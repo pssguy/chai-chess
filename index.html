@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-font-smoothing:antialiased}img{max-width:100%}</style>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8c3f09c6e8874777a1d19c68ad3862d9"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body>
 <script>(function(){try{if(sessionStorage.getItem('chai-intro-seen')!=='1'&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))document.documentElement.classList.add('intro-pending')}catch(e){}})();</script>
@@ -182,6 +183,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .plist .done{color:var(--good)}
 .sitefoot{max-width:1200px;margin:40px auto 0;padding-top:14px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .sitefoot button{font-size:12px;padding:5px 10px}
+.sitecredit{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:10px 10px 20px;text-transform:none}
+.sitecredit a{color:inherit;text-decoration:underline}
 /* timed games, secret queen */
 .turnpill{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:3px}
 .sq-crown{position:absolute;top:2%;right:2%;width:34%;height:34%;z-index:2;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
@@ -550,6 +553,7 @@ button.linkish{border:0;background:none;padding:0;text-decoration:underline;colo
 </section>
 </div>
 <footer class="sitefoot"><span>A Chai Publications Project</span><button type="button" id="replayIntro">Replay intro</button></footer>
+<div class="sitecredit">A <a href="https://selfcentred.me">selfcentred.me</a> project</div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="chess.js"></script>
